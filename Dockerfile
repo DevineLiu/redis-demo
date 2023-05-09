@@ -19,6 +19,8 @@ RUN mvn clean package
 
 FROM  amazoncorretto:8u372-alpine
 
+RUN apk add --no-cache redis
+
 # 设置工作目录
 WORKDIR /app
 COPY --from=build /build/target/redis-demo-1.0-SNAPSHOT.jar /app/app.jar
