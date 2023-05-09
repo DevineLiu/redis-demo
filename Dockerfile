@@ -1,5 +1,5 @@
 
-FROM maven:3.6.3-openjdk-8 AS build
+FROM maven:3.9.1-amazoncorretto-8 AS build
 
 # 设置工作目录
 WORKDIR /build
@@ -17,7 +17,7 @@ COPY src /build/src
 RUN mvn clean package
 
 
-FROM openjdk:8-jre-slim
+FROM  amazoncorretto:8u372-alpine
 
 # 设置工作目录
 WORKDIR /app
