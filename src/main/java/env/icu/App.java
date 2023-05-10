@@ -20,7 +20,7 @@ public final class App {
     private static final String REDIS_PASSWORD = "REDIS_PASSWORD";
     private static final String REDIS_ARCH = "REDIS_ARCH";
     private static final String REDIS_ADDRESS = "REDIS_ADDRESS";
-    private static final String REDIS_MASTER_NAME = "REDIS_MASTER_NAME ";
+    private static final String REDIS_MASTER_NAME = "REDIS_MASTER_NAME";
 
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
