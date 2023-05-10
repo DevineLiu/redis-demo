@@ -1,6 +1,8 @@
 # GUIDE
 
----
+
+
+[中文说明](docs/readme_cn.md)
 
 ## docker env
 
