@@ -70,6 +70,7 @@ public final class App {
                         String key = "key" + i;
                         jedis.get(key);
                     }
+                    logger.info("get test success");
                 } catch (JedisConnectionException e) {
                     logger.error("Failed to connect to Redis: {}", e.getMessage());
                 } finally {
@@ -95,6 +96,7 @@ public final class App {
                         String key = "key" + i;
                         jedisCluster.get(key);
                     }
+                    logger.info("get test success");
                 } finally {
                     jedisCluster.close();
                 }
@@ -109,7 +111,7 @@ public final class App {
                     logger.info("sentinal master: {}",sentinelPool.getCurrentHostMaster().toString());
                     jedisFromSentinel = sentinelPool.getResource();
                     if (username != null && password != null) {
-                        jedisFromSentinel .auth(username, password);
+                        jedisFromSentinel.auth(username, password);
                     } else if (password != null) {
                         jedisFromSentinel.auth(password);
                     }
@@ -117,6 +119,7 @@ public final class App {
                         String key = "key" + i;
                         jedisFromSentinel.get(key);
                     }
+                    logger.info("get test success");
                 } finally {
                     if (jedisFromSentinel != null) {
                         jedisFromSentinel.close();
