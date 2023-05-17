@@ -5,6 +5,7 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisSentinelPool;
+import redis.clients.jedis.JedisPoolConfig;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashSet;
@@ -78,6 +79,16 @@ public final class App {
             case "cluster":
                 Set<HostAndPort> nodes = parseHostsAndPorts(address);
                 JedisCluster jedisCluster = new JedisCluster(nodes);
+                if (username != null && password != null) {
+                    //jedisCluster.auth(username, password);
+                    JedisPoolConfig poolConfig = new JedisPoolConfig();
+                    jedisCluster = new JedisCluster(nodes,60,60,60,username,password,"jedis-demo",poolConfig);
+
+                } else if (password != null) {
+                    JedisPoolConfig poolConfig = new JedisPoolConfig();
+                    jedisCluster = new JedisCluster(nodes,60,60,60,password,"redis-demo",poolConfig);
+
+                }
                 try {
                     logger.info("cluster nodes: {}",jedisCluster.getClusterNodes().toString());
                     for (int i = 1; i <= 1000; i++) {
@@ -97,6 +108,11 @@ public final class App {
                 try {
                     logger.info("sentinal master: {}",sentinelPool.getCurrentHostMaster().toString());
                     jedisFromSentinel = sentinelPool.getResource();
+                    if (username != null && password != null) {
+                        jedisFromSentinel .auth(username, password);
+                    } else if (password != null) {
+                        jedisFromSentinel.auth(password);
+                    }
                     for (int i = 1; i <= 1000; i++) {
                         String key = "key" + i;
                         jedisFromSentinel.get(key);
