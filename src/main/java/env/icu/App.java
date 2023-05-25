@@ -79,7 +79,7 @@ public final class App {
                 break;
             case "cluster":
                 Set<HostAndPort> nodes = parseHostsAndPorts(address);
-                JedisCluster jedisCluster = new JedisCluster(nodes);
+                JedisCluster jedisCluster ;
                 if (username != null && password != null) {
                     //jedisCluster.auth(username, password);
                     JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -89,6 +89,8 @@ public final class App {
                     JedisPoolConfig poolConfig = new JedisPoolConfig();
                     jedisCluster = new JedisCluster(nodes,60,60,60,password,"redis-demo",poolConfig);
 
+                } else {
+                     jedisCluster = new JedisCluster(nodes);
                 }
                 try {
                     logger.info("cluster nodes: {}",jedisCluster.getClusterNodes().toString());
