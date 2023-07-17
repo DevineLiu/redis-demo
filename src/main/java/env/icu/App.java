@@ -1,11 +1,10 @@
 package env.icu;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.exceptions.JedisConnectionException;
+import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisSentinelPool;
-import redis.clients.jedis.JedisPoolConfig;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashSet;
@@ -16,8 +15,6 @@ import org.slf4j.LoggerFactory;
 
 public final class App {
     private static final String REDIS_HOST = "REDIS_HOST";
-    private static final String REDIS_PORT = "REDIS_PORT";
-    private static final String REDIS_USERNAME = "REDIS_USERNAME";
     private static final String REDIS_PASSWORD = "REDIS_PASSWORD";
     private static final String REDIS_ARCH = "REDIS_ARCH";
     private static final String REDIS_ADDRESS = "REDIS_ADDRESS";
@@ -46,9 +43,6 @@ public final class App {
         if (master_name == null) {
             master_name = "mymaster";
         }
-        String envValue = System.getenv(REDIS_PORT);
-        int port = envValue != null ? Integer.parseInt(envValue) : 6379; // provide default value
-        String username = System.getenv(REDIS_USERNAME);
         String password = System.getenv(REDIS_PASSWORD);
         String arch = System.getenv(REDIS_ARCH);
         if (arch == null) {
@@ -56,53 +50,6 @@ public final class App {
         }
 
         switch (arch) {
-            case "standalone":
-                Jedis jedis = new Jedis(host, port);
-                try {
-                    if (username != null && password != null) {
-                        jedis.auth(username, password);
-                    } else if (password != null) {
-                        jedis.auth(password);
-                    }
-                    // 获取键值对的值
-                    logger.info("standalone info: {}", jedis.info());
-                    for (int i = 1; i <= 1000; i++) {
-                        String key = "key" + i;
-                        jedis.get(key);
-                    }
-                    logger.info("get test success");
-                } catch (JedisConnectionException e) {
-                    logger.error("Failed to connect to Redis: {}", e.getMessage());
-                } finally {
-                    jedis.close();
-                }
-                break;
-            case "cluster":
-                Set<HostAndPort> nodes = parseHostsAndPorts(address);
-                JedisCluster jedisCluster ;
-                if (username != null && password != null) {
-                    //jedisCluster.auth(username, password);
-                    JedisPoolConfig poolConfig = new JedisPoolConfig();
-                    jedisCluster = new JedisCluster(nodes,60,60,60,username,password,"jedis-demo",poolConfig);
-
-                } else if (password != null) {
-                    JedisPoolConfig poolConfig = new JedisPoolConfig();
-                    jedisCluster = new JedisCluster(nodes,60,60,60,password,"redis-demo",poolConfig);
-
-                } else {
-                     jedisCluster = new JedisCluster(nodes);
-                }
-                try {
-                    logger.info("cluster nodes: {}",jedisCluster.getClusterNodes().toString());
-                    for (int i = 1; i <= 1000; i++) {
-                        String key = "key" + i;
-                        jedisCluster.get(key);
-                    }
-                    logger.info("get test success");
-                } finally {
-                    jedisCluster.close();
-                }
-                break;
             case "sentinel":
                 Set<HostAndPort> s_nodes = parseHostsAndPorts(address);
                 Set<String> sentinels = convertHostAndPortsToStrings(s_nodes);
@@ -110,17 +57,35 @@ public final class App {
                 JedisSentinelPool sentinelPool = new JedisSentinelPool(master_name, sentinels);
                 Jedis jedisFromSentinel = null;
                 try {
-                    logger.info("sentinal master: {}",sentinelPool.getCurrentHostMaster().toString());
+                    logger.info("sentinal master: {}", sentinelPool.getCurrentHostMaster().toString());
                     jedisFromSentinel = sentinelPool.getResource();
-                    if (username != null && password != null) {
-                        jedisFromSentinel.auth(username, password);
-                    } else if (password != null) {
+                    if (password != null) {
                         jedisFromSentinel.auth(password);
                     }
                     for (int i = 1; i <= 1000; i++) {
                         String key = "key" + i;
                         jedisFromSentinel.get(key);
                     }
+
+                    JedisPubSub jedisPubSub = new JedisPubSub() {
+                        @Override
+                        public void onMessage(String channel, String message) {
+                            // Process the received message
+                            System.out.println("Received message: " + message + " from channel: " + channel);
+                        }
+
+                        @Override
+                        public void onSubscribe(String channel, int subscribedChannels) {
+                            System.out.println("Subscribed to channel: " + channel);
+                        }
+
+                        @Override
+                        public void onUnsubscribe(String channel, int subscribedChannels) {
+                            System.out.println("Unsubscribed from channel: " + channel);
+                        }
+                    };
+
+                    jedisFromSentinel.subscribe(jedisPubSub, "my-channel");
                     logger.info("get test success");
                 } finally {
                     if (jedisFromSentinel != null) {
@@ -128,6 +93,7 @@ public final class App {
                     }
                     sentinelPool.close();
                 }
+
                 break;
 
             default:
