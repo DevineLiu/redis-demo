@@ -6,7 +6,6 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisSentinelPool;
 import java.net.InetAddress;
 
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashSet;
@@ -124,16 +123,23 @@ public final class App {
 
         return hostAndPorts;
     }
+
     public static Set<HostAndPort> parseHostsNameAndPorts(String addresses) {
         Set<HostAndPort> hostAndPorts = new HashSet<>();
         String[] hostPortPairs = addresses.split(",");
-        Pattern hostPortPattern = Pattern.compile("^\\[?([0-9a-zA-Z\\-_.]+)]?:(\\d+)$");
-    
+        Pattern hostPortPattern = Pattern.compile("^\\[?([0-9a-zA-Z\\-_.]+)]?(:\\d+)?$");
+
         for (String hostPortPair : hostPortPairs) {
             Matcher matcher = hostPortPattern.matcher(hostPortPair);
             if (matcher.find()) {
                 String host = matcher.group(1);
-                int port = Integer.parseInt(matcher.group(2));
+                String portString = matcher.group(2);
+
+                int port = 6379; // Default port number if not specified
+                if (portString != null) {
+                    port = Integer.parseInt(portString.substring(1)); // Remove the colon from the port string
+                }
+
                 try {
                     InetAddress[] inetAddresses = InetAddress.getAllByName(host);
                     for (InetAddress inetAddress : inetAddresses) {
@@ -146,10 +152,10 @@ public final class App {
                 throw new IllegalArgumentException("Invalid host:port pair: " + hostPortPair);
             }
         }
-    
+
         return hostAndPorts;
     }
-      
+
     public static Set<String> convertHostAndPortsToStrings(Set<HostAndPort> hostAndPorts) {
         Set<String> stringSet = new HashSet<>();
 
