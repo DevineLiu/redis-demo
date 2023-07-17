@@ -4,6 +4,8 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisSentinelPool;
+import java.net.InetAddress;
+
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,7 +53,7 @@ public final class App {
 
         switch (arch) {
             case "sentinel":
-                Set<HostAndPort> s_nodes = parseHostsAndPorts(address);
+                Set<HostAndPort> s_nodes = parseHostsNameAndPorts(address);
                 Set<String> sentinels = convertHostAndPortsToStrings(s_nodes);
 
                 JedisSentinelPool sentinelPool = new JedisSentinelPool(master_name, sentinels);
@@ -122,7 +124,32 @@ public final class App {
 
         return hostAndPorts;
     }
-
+    public static Set<HostAndPort> parseHostsNameAndPorts(String addresses) {
+        Set<HostAndPort> hostAndPorts = new HashSet<>();
+        String[] hostPortPairs = addresses.split(",");
+        Pattern hostPortPattern = Pattern.compile("^\\[?([0-9a-zA-Z\\-_.]+)]?:(\\d+)$");
+    
+        for (String hostPortPair : hostPortPairs) {
+            Matcher matcher = hostPortPattern.matcher(hostPortPair);
+            if (matcher.find()) {
+                String host = matcher.group(1);
+                int port = Integer.parseInt(matcher.group(2));
+                try {
+                    InetAddress[] inetAddresses = InetAddress.getAllByName(host);
+                    for (InetAddress inetAddress : inetAddresses) {
+                        hostAndPorts.add(new HostAndPort(inetAddress.getHostAddress(), port));
+                    }
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Unknown host: " + host);
+                }
+            } else {
+                throw new IllegalArgumentException("Invalid host:port pair: " + hostPortPair);
+            }
+        }
+    
+        return hostAndPorts;
+    }
+      
     public static Set<String> convertHostAndPortsToStrings(Set<HostAndPort> hostAndPorts) {
         Set<String> stringSet = new HashSet<>();
 
