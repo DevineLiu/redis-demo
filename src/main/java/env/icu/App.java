@@ -93,7 +93,6 @@ public final class App {
                     }
                     sentinelPool.close();
                 }
-
                 break;
 
             default:
