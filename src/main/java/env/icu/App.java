@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,19 +48,26 @@ public final class App {
         String password = System.getenv(REDIS_PASSWORD);
         String arch = System.getenv(REDIS_ARCH);
         if (arch == null) {
-            arch = "standalone";
+            arch = "sentinel";
         }
 
         switch (arch) {
             case "sentinel":
                 Set<HostAndPort> s_nodes = parseHostsNameAndPorts(address);
                 Set<String> sentinels = convertHostAndPortsToStrings(s_nodes);
-
-                JedisSentinelPool sentinelPool = new JedisSentinelPool(master_name, sentinels);
+                GenericObjectPoolConfig config = new GenericObjectPoolConfig();
+                config.setMaxIdle(25);
+                config.setMinIdle(0);
+                config.setMaxTotal(200);
+                config.setTestOnBorrow(false);
+                config.setTestOnReturn(false);
+                config.setMaxWaitMillis(10000);
+                JedisSentinelPool sentinelPool = new JedisSentinelPool(master_name, sentinels,config);
                 Jedis jedisFromSentinel = null;
                 try {
                     logger.info("sentinal master: {}", sentinelPool.getCurrentHostMaster().toString());
                     jedisFromSentinel = sentinelPool.getResource();
+
                     if (password != null) {
                         jedisFromSentinel.auth(password);
                     }
